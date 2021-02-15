@@ -36,3 +36,5 @@ entry("getpid");
 entry("sbrk");
 entry("sleep");
 entry("uptime");
+entry("trace"); # a stub for the "trace" system call
+entry("sysinfo"); # a stub for the "sysinfo" system call

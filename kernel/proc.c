@@ -267,6 +267,9 @@ fork(void)
     return -1;
   }
 
+  // Modify fork() (see kernel/proc.c) to copy the trace mask from the parent to the child process
+  np->mask = p->mask;
+
   // Copy user memory from parent to child.
   if(uvmcopy(p->pagetable, np->pagetable, p->sz) < 0){
     freeproc(np);
@@ -692,4 +695,15 @@ procdump(void)
     printf("%d %s %s", p->pid, state, p->name);
     printf("\n");
   }
+}
+
+// nproc calculated the number of processes whose state is not UNUSED
+uint64
+nproc(void){
+  int n=0; // number of processes whose state is not UNUSED
+  int i;
+  for (i=1;i<NPROC;i++){
+    if (proc[i].state != UNUSED) n++;
+  }
+  return n;
 }

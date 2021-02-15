@@ -95,3 +95,17 @@ sys_uptime(void)
   release(&tickslock);
   return xticks;
 }
+
+// the trace system call
+// Add a sys_trace() function in kernel/sysproc.c that implements the new 
+//   system call by remembering its argument in a new variable in the proc 
+//   structure (see kernel/proc.h).
+uint64
+sys_trace(void)
+{
+  int n;
+  if (argint(0, &n) < 0) // get parameter
+    return -1;
+  myproc()->mask = n;    // save argv[1] to the mask of current process
+  return 0;
+}
