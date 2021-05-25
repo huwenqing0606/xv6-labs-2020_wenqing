@@ -50,7 +50,8 @@ usertrap(void)
   // save user program counter.
   p->trapframe->epc = r_sepc();
   
-  if(r_scause() == 8){
+  if(r_scause() == 8)
+  {
     // system call
 
     if(p->killed)
@@ -65,9 +66,40 @@ usertrap(void)
     intr_on();
 
     syscall();
-  } else if((which_dev = devintr()) != 0){
+  } 
+  else if((which_dev = devintr()) != 0)
+  {
     // ok
-  } else {
+  } 
+  else if (r_scause() == 15 || r_scause() == 13) // check whether a fault is a page fault 
+                                                 // by seeing if r_scause() is 13 or 15
+  {
+    uint64 va = r_stval(); // r_stval() returns the RISC-V stval register, 
+                           // which contains the virtual address that caused the page fault
+    printf("page fault %p\n", va); // print the virtual address of the page fault
+    if (va < p->sz && va > PGROUNDDOWN(p->trapframe->sp)) { 
+        uint64 ka = (uint64) kalloc();
+        if (ka == 0) 
+            p->killed = 1; // if kalloc() fails in the page fault handler, kill the current process
+        else
+        { // stealed from uvmalloc() in vm.c
+            memset((void*)ka, 0, PGSIZE); // mapping a newly-allocated page of physical memory at the faulting address
+            va = PGROUNDDOWN(va); // round the faulting virtual address down to a page boundary
+            if (mappages(p->pagetable, va, PGSIZE, ka, PTE_U | PTE_W| PTE_R) != 0)
+            {
+                kfree((void*)ka);
+                p->killed = 1;
+            }
+        }
+    }
+    else
+        // kill a process if it page-faults on a virtual memory address in the following cases:
+        // (a) higher than any allocated with sbrk()
+        // (b) faults on the invalid page below the user stack
+        p->killed = 1;
+  }
+  else 
+  {
     printf("usertrap(): unexpected scause %p pid=%d\n", r_scause(), p->pid);
     printf("            sepc=%p stval=%p\n", r_sepc(), r_stval());
     p->killed = 1;

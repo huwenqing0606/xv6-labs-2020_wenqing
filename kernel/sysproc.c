@@ -47,8 +47,16 @@ sys_sbrk(void)
   if(argint(0, &n) < 0)
     return -1;
   addr = myproc()->sz;
-  if(growproc(n) < 0)
-    return -1;
+  // handle negative sbrk() arguments
+  if (n<0) {
+      if (myproc()->sz+n<0) return -1;
+      else uvmdealloc(myproc()->pagetable, myproc()->sz, myproc()->sz+n);
+  }
+  // the new sbrk(n) just increments the process's size (myproc()->sz) by n
+  myproc()->sz += n;
+  // the new sbrk(n) does not allocate memory - so we delete the call to growproc() 
+  //if(growproc(n) < 0)
+  //  return -1;
   return addr;
 }
 

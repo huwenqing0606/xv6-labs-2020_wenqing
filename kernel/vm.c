@@ -3,6 +3,8 @@
 #include "memlayout.h"
 #include "elf.h"
 #include "riscv.h"
+#include "spinlock.h"
+#include "proc.h"
 #include "defs.h"
 #include "fs.h"
 
@@ -96,15 +98,33 @@ walkaddr(pagetable_t pagetable, uint64 va)
 {
   pte_t *pte;
   uint64 pa;
-
+  
   if(va >= MAXVA)
     return 0;
 
   pte = walk(pagetable, va, 0);
-  if(pte == 0)
-    return 0;
-  if((*pte & PTE_V) == 0)
-    return 0;
+  //if(pte == 0)
+  //  return 0;
+  //if((*pte & PTE_V) == 0)
+  //  return 0;
+  if(pte == 0 || (*pte & PTE_V) == 0)
+  // Handle the case in which a process passes a valid address from sbrk() to a system 
+  // call such as read or write, but the memory for that address has not yet been allocated
+  {
+    struct proc *p = myproc();  
+    if (va >= p->sz || va < PGROUNDUP(p->trapframe->sp))
+      return 0;
+    uint64 ka = (uint64)kalloc();
+    if (ka == 0) return 0;
+    memset((void*)ka, 0, PGSIZE); // mapping a newly-allocated page of physical memory at the faulting address
+    // for system calls PTE_X is also added
+    if (mappages(p->pagetable, PGROUNDDOWN(va), PGSIZE, ka, PTE_W|PTE_X|PTE_R|PTE_U) != 0)
+    {
+      kfree((void*)ka);
+      return 0;
+    }
+    return ka;
+  }
   if((*pte & PTE_U) == 0)
     return 0;
   pa = PTE2PA(*pte);
@@ -181,9 +201,11 @@ uvmunmap(pagetable_t pagetable, uint64 va, uint64 npages, int do_free)
 
   for(a = va; a < va + npages*PGSIZE; a += PGSIZE){
     if((pte = walk(pagetable, a, 0)) == 0)
-      panic("uvmunmap: walk");
+      // panic("uvmunmap: walk");   // ignore this part for task "Lazy allocation"
+      continue;
     if((*pte & PTE_V) == 0)
-      panic("uvmunmap: not mapped");
+      // panic("uvmunmap: not mapped");  // ignore this part for task "Lazy allocation"
+      continue;
     if(PTE_FLAGS(*pte) == PTE_V)
       panic("uvmunmap: not a leaf");
     if(do_free){
@@ -315,9 +337,15 @@ uvmcopy(pagetable_t old, pagetable_t new, uint64 sz)
 
   for(i = 0; i < sz; i += PGSIZE){
     if((pte = walk(old, i, 0)) == 0)
-      panic("uvmcopy: pte should exist");
+      // ignore the panic when fork() calls uvmcopy() and 
+      // child copies parent's address space but that memory does not exist 
+      continue;
+      //panic("uvmcopy: pte should exist");
     if((*pte & PTE_V) == 0)
-      panic("uvmcopy: page not present");
+      // ignore the panic when fork() calls uvmcopy() and 
+      // the allocated page is not present
+      continue;
+      //panic("uvmcopy: page not present");
     pa = PTE2PA(*pte);
     flags = PTE_FLAGS(*pte);
     if((mem = kalloc()) == 0)
