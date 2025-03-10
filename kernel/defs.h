@@ -178,6 +178,9 @@ uint64          walkaddr(pagetable_t, uint64);
 int             copyout(pagetable_t, uint64, char *, uint64);
 int             copyin(pagetable_t, char *, uint64, uint64);
 int             copyinstr(pagetable_t, char *, uint64, uint64);
+// define vmprint that prints a pagetable, uses the recursion function vmprint_recursion 
+void            vmprint(pagetable_t);
+void            vmprint_recursion(pagetable_t, int);
 
 // plic.c
 void            plicinit(void);
