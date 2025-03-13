@@ -3,6 +3,8 @@
 #include "memlayout.h"
 #include "elf.h"
 #include "riscv.h"
+#include "spinlock.h"
+#include "proc.h"
 #include "defs.h"
 #include "fs.h"
 
@@ -132,7 +134,10 @@ kvmpa(uint64 va)
   pte_t *pte;
   uint64 pa;
   
-  pte = walk(kernel_pagetable, va, 0);
+  // has to change the kernel_pagetable to p->kernel_pagetable for the specific user process
+  struct proc *p = myproc();
+  pte = walk(p->kernel_pagetable, va, 0);
+  
   if(pte == 0)
     panic("kvmpa");
   if((*pte & PTE_V) == 0)
@@ -478,4 +483,38 @@ vmprint(pagetable_t pagetable)
 {
   printf("page table %p\n", pagetable);
   vmprint_recursion(pagetable, 1);
+}
+
+// create a copy of the global kernel page table for each single user process
+pagetable_t
+process_kernel_pagetable_init()
+{
+  pagetable_t process_kernel_pagetable;
+  process_kernel_pagetable = uvmcreate();
+  if (process_kernel_pagetable == 0) return 0;
+
+  // uart registers
+  uvmmap(process_kernel_pagetable, UART0, UART0, PGSIZE, PTE_R | PTE_W);
+  // virtio mmio disk interface
+  uvmmap(process_kernel_pagetable, VIRTIO0, VIRTIO0, PGSIZE, PTE_R | PTE_W);
+  // CLINT
+  uvmmap(process_kernel_pagetable, CLINT, CLINT, 0x10000, PTE_R | PTE_W);
+  // PLIC
+  uvmmap(process_kernel_pagetable, PLIC, PLIC, 0x400000, PTE_R | PTE_W);
+  // map kernel text executable and read-only.
+  uvmmap(process_kernel_pagetable, KERNBASE, KERNBASE, (uint64)etext-KERNBASE, PTE_R | PTE_X);
+  // map kernel data and the physical RAM we'll make use of.
+  uvmmap(process_kernel_pagetable, (uint64)etext, (uint64)etext, PHYSTOP-(uint64)etext, PTE_R | PTE_W);
+  // map the trampoline for trap entry/exit to
+  // the highest virtual address in the kernel.
+  uvmmap(process_kernel_pagetable, TRAMPOLINE, (uint64)trampoline, PGSIZE, PTE_R | PTE_X);
+  return process_kernel_pagetable;
+}
+
+// add a mapping to the user page table.
+void
+uvmmap(pagetable_t pagetable, uint64 va, uint64 pa, uint64 sz, int perm)
+{
+  if(mappages(pagetable, va, sz, pa, perm) != 0)
+    panic("uvmmap");
 }

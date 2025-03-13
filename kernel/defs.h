@@ -108,6 +108,8 @@ void            yield(void);
 int             either_copyout(int user_dst, uint64 dst, void *src, uint64 len);
 int             either_copyin(void *dst, int user_src, uint64 src, uint64 len);
 void            procdump(void);
+// claim proc_freekernelpagetable
+void            proc_freekernelpagetable(pagetable_t);
 
 // swtch.S
 void            swtch(struct context*, struct context*);
@@ -174,6 +176,9 @@ int             uvmcopy(pagetable_t, pagetable_t, uint64);
 void            uvmfree(pagetable_t, uint64);
 void            uvmunmap(pagetable_t, uint64, uint64, int);
 void            uvmclear(pagetable_t, uint64);
+// walk is now used to delete the kernel stack 
+//  in freeproc() in proc.c, so must be claimed here
+pte_t           *walk(pagetable_t pagetable, uint64 va, int alloc);
 uint64          walkaddr(pagetable_t, uint64);
 int             copyout(pagetable_t, uint64, char *, uint64);
 int             copyin(pagetable_t, char *, uint64, uint64);
@@ -181,6 +186,9 @@ int             copyinstr(pagetable_t, char *, uint64, uint64);
 // define vmprint that prints a pagetable, uses the recursion function vmprint_recursion 
 void            vmprint(pagetable_t);
 void            vmprint_recursion(pagetable_t, int);
+// define process_kernel_pagetable_init() and uvmmap()
+pagetable_t     process_kernel_pagetable_init();
+void            uvmmap();
 
 // plic.c
 void            plicinit(void);
