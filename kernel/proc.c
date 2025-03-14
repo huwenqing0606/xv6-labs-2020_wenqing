@@ -281,6 +281,10 @@ userinit(void)
   uvminit(p->pagetable, initcode, sizeof(initcode));
   p->sz = PGSIZE;
 
+  // 将用户页表拷贝至用户特有的内核页表
+  // copy the user pagetable to its user-specifit kernel pagetable
+  u2kvmcopy(p->pagetable, p->kernel_pagetable, 0, p->sz);
+
   // prepare for the very first "return" from kernel to user.
   p->trapframe->epc = 0;      // user program counter
   p->trapframe->sp = PGSIZE;  // user stack pointer
@@ -303,8 +307,15 @@ growproc(int n)
 
   sz = p->sz;
   if(n > 0){
+    // 防止用户进程增长超出PLIC地址
+    // prevent user processes from growing larger than the PLIC address
+    if (PGROUNDUP(sz + n) >= PLIC)
+      return -1;  
     if((sz = uvmalloc(p->pagetable, sz, sz + n)) == 0) {
       return -1;
+    // 将用户页表拷贝至用户特有的内核页表
+    // copy the user pagetable to its user-specifit kernel pagetable
+    u2kvmcopy(p->pagetable, p->kernel_pagetable, sz-n, sz);
     }
   } else if(n < 0){
     sz = uvmdealloc(p->pagetable, sz, sz + n);
@@ -348,6 +359,10 @@ fork(void)
     if(p->ofile[i])
       np->ofile[i] = filedup(p->ofile[i]);
   np->cwd = idup(p->cwd);
+
+  // 将用户页表拷贝至用户特有的内核页表
+  // copy the user pagetable to its user-specifit kernel pagetable
+  u2kvmcopy(np->pagetable, np->kernel_pagetable, 0, np->sz);
 
   safestrcpy(np->name, p->name, sizeof(p->name));
 

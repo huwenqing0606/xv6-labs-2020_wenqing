@@ -189,6 +189,13 @@ void            vmprint_recursion(pagetable_t, int);
 // define process_kernel_pagetable_init() and uvmmap()
 pagetable_t     process_kernel_pagetable_init();
 void            uvmmap();
+// 增加u2kvmcopy的函数签名
+void            u2kvmcopy(pagetable_t, pagetable_t, uint64, uint64);
+// 增加copyin_new copyinstr_new的签名
+// vmcopyin.c
+// used for the task "Simplify copyin/copyinstr"
+int             copyin_new(pagetable_t, char *, uint64, uint64);
+int             copyinstr_new(pagetable_t, char *, uint64, uint64);
 
 // plic.c
 void            plicinit(void);

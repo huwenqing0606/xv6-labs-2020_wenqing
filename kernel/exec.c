@@ -75,6 +75,10 @@ exec(char *path, char **argv)
   sp = sz;
   stackbase = sp - PGSIZE;
 
+  // 将用户页表拷贝至用户特有的内核页表
+  // copy the user pagetable to its user-specific kernel pagetable
+  u2kvmcopy(pagetable, p->kernel_pagetable, 0, sz);
+    
   // Push argument strings, prepare rest of stack in ustack.
   for(argc = 0; argv[argc]; argc++) {
     if(argc >= MAXARG)
