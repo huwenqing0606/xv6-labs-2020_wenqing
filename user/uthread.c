@@ -11,6 +11,7 @@
 #define MAX_THREAD  4
 
 // context information for registers of the thread
+// 添加线程在寄存器中存储的上下文信息
 struct context {
   uint64 ra;
   uint64 sp;
@@ -33,6 +34,7 @@ struct thread {
   char       stack[STACK_SIZE]; /* the thread's stack */
   int        state;             /* FREE, RUNNING, RUNNABLE */
   struct context context;       /* context information for registers of the thread */
+                                /* 线程在寄存器中存储的上下文信息 */
 };
 struct thread all_thread[MAX_THREAD];
 struct thread *current_thread;
@@ -81,6 +83,7 @@ thread_schedule(void)
      * Invoke thread_switch to switch from t to next_thread:
      * thread_switch(??, ??);
      */
+    // 交换线程的上下文信息
     thread_switch((uint64)&t->context, (uint64)&next_thread->context);
   } else
     next_thread = 0;
@@ -96,6 +99,9 @@ thread_create(void (*func)())
   }
   t->state = RUNNABLE;
   // YOUR CODE HERE
+  // 设置线程的 
+  //  1. ra 寄存器，存放函数返回地址
+  //  2. sp 寄存器，一开始要指向栈底，为函数参数存储分配空间      
   t->context.ra = (uint64)func;
   t->context.sp = (uint64)t->stack + STACK_SIZE;  // points to bottom of stack
 }
