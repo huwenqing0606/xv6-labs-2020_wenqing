@@ -16,6 +16,8 @@ struct entry {
 struct entry *table[NBUCKET];
 int keys[NKEYS];
 int nthread = 1;
+// 声明锁
+pthread_mutex_t locks[NBUCKET];
 
 double
 now()
@@ -39,6 +41,8 @@ static
 void put(int key, int value)
 {
   int i = key % NBUCKET;
+  // 放置锁
+  pthread_mutex_lock(&locks[i]);
 
   // is the key already present?
   struct entry *e = 0;
@@ -53,6 +57,8 @@ void put(int key, int value)
     // the new is new.
     insert(key, value, &table[i], table[i]);
   }
+  // 解锁
+  pthread_mutex_unlock(&locks[i]);
 }
 
 static struct entry*
