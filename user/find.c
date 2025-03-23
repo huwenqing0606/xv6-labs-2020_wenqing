@@ -12,6 +12,7 @@
 
 #define O_RDONLY 0
 
+// 实现一个find函数的功能
 // given a path, return the formatted file name, size is DIRSIZ
 char*
 fmtname(char *path)

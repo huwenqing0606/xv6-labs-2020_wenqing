@@ -6,6 +6,7 @@
 #define OUT 1
 #define ERR 2
 
+// 实现sleep
 int
 main(int argc, char* argv[])
 {

@@ -8,6 +8,7 @@
 #define MAXIN 1024
 #define MAXWORD 64
 
+// 实现 UNIX xargs program
 int 
 main(int argc, char *argv[])
 {

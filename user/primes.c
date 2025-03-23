@@ -9,6 +9,7 @@
 #define READEND  0
 #define WRITEEND 1
 
+// 用并发编程的方式实现埃拉托斯特尼素数筛
 int 
 main(){
     int filtered_numbers[36], p[2];

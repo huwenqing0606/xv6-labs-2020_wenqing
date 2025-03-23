@@ -9,6 +9,7 @@
 #define READEND  0
 #define WRITEEND 1
 
+// 利用pipe写pingpong
 int 
 main(){
     // build two pipes, write end for parent/child

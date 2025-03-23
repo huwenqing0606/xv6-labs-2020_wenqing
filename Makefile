@@ -149,6 +149,7 @@ UPROGS=\
 	$U/_grind\
 	$U/_wc\
 	$U/_zombie\
+	# 添加sleep，其他类同
 	$U/_sleep\
 	$U/_pingpong\
 	$U/_primes\
