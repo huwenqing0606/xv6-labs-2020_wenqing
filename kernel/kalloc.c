@@ -18,15 +18,21 @@ struct run {
   struct run *next;
 };
 
+// 为每个cpu分配单独的内存链表
 struct {
   struct spinlock lock;
   struct run *freelist;
-} kmem;
+} kmem[NCPU];
 
 void
 kinit()
 {
-  initlock(&kmem.lock, "kmem");
+  // 获取cpuid，但必须先禁用中断
+  push_off();
+  int id = cpuid();
+  pop_off();
+
+  initlock(&kmem[id].lock, "kmem");
   freerange(end, (void*)PHYSTOP);
 }
 
@@ -56,10 +62,15 @@ kfree(void *pa)
 
   r = (struct run*)pa;
 
-  acquire(&kmem.lock);
-  r->next = kmem.freelist;
-  kmem.freelist = r;
-  release(&kmem.lock);
+  // 获取cpuid，但必须先禁用中断
+  push_off();
+  int id = cpuid();
+  pop_off();
+
+  acquire(&kmem[id].lock);
+  r->next = kmem[id].freelist;
+  kmem[id].freelist = r;
+  release(&kmem[id].lock);
 }
 
 // Allocate one 4096-byte page of physical memory.
@@ -70,11 +81,31 @@ kalloc(void)
 {
   struct run *r;
 
-  acquire(&kmem.lock);
-  r = kmem.freelist;
+  // 获取cpuid，但必须先禁用中断
+  push_off();
+  int id = cpuid();
+  pop_off();
+
+  acquire(&kmem[id].lock);
+  r = kmem[id].freelist;
   if(r)
-    kmem.freelist = r->next;
-  release(&kmem.lock);
+    kmem[id].freelist = r->next;
+  release(&kmem[id].lock);
+
+  // 如果一个CPU的内存链表已经满，偷取其他CPU的内存链表
+  if (!r) {
+    for (int i=0; i<NCPU; i++) {
+      if (i == id) continue;
+      acquire(&kmem[i].lock);
+      r = kmem[i].freelist;
+      if (r) {
+        kmem[i].freelist = r->next;
+        release(&kmem[i].lock);
+        break;
+      }
+      release(&kmem[i].lock);      
+    }
+  }
 
   if(r)
     memset((char*)r, 5, PGSIZE); // fill with junk
