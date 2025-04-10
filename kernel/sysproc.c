@@ -96,6 +96,7 @@ sys_uptime(void)
   return xticks;
 }
 
+// 添加 trace 系统调用
 // the trace system call
 // Add a sys_trace() function in kernel/sysproc.c that implements the new 
 //   system call by remembering its argument in a new variable in the proc 

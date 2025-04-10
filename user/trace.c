@@ -14,6 +14,7 @@ main(int argc, char *argv[])
     exit(1);
   }
 
+  // 记录mask, 只需要实现对argv[1]的记录
   if (trace(atoi(argv[1])) < 0) {
     fprintf(2, "%s: trace failed\n", argv[0]);
     exit(1);

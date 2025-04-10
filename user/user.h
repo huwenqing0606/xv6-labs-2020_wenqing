@@ -24,8 +24,8 @@ int getpid(void);
 char* sbrk(int);
 int sleep(int);
 int uptime(void);
-int trace(int); // add a prototype for the system call "trace"
-int sysinfo(struct sysinfo *); // add a prototype for the system call "sysinfo"
+int trace(int); // 声明 trace.c
+int sysinfo(struct sysinfo *); // 声明 sysinfo
 
 // ulib.c
 int stat(const char*, struct stat*);

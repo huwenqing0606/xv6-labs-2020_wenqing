@@ -36,5 +36,5 @@ entry("getpid");
 entry("sbrk");
 entry("sleep");
 entry("uptime");
-entry("trace"); # a stub for the "trace" system call
-entry("sysinfo"); # a stub for the "sysinfo" system call
+entry("trace"); # 为 trace 添加 stub
+entry("sysinfo"); # 为 sysinfo 添加 stub

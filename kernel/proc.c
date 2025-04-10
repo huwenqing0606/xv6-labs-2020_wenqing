@@ -267,6 +267,7 @@ fork(void)
     return -1;
   }
 
+  // 修改 fork 函数，将 mask 从父进程拷贝到子进程
   // Modify fork() (see kernel/proc.c) to copy the trace mask from the parent to the child process
   np->mask = p->mask;
 

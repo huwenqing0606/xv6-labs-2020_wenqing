@@ -104,8 +104,8 @@ extern uint64 sys_unlink(void);
 extern uint64 sys_wait(void);
 extern uint64 sys_write(void);
 extern uint64 sys_uptime(void);
-extern uint64 sys_trace(void); // add the ``trace" function to retrieve system call arguments from user space
-extern uint64 sys_sysinfo(void); // add the "sysinfo" function to retrieve system call arguments from user space
+extern uint64 sys_trace(void); // 添加 sys_trace 声明，add the ``trace" function to retrieve system call arguments from user space
+extern uint64 sys_sysinfo(void); // 添加 sys_sysinfo 声明，add the "sysinfo" function to retrieve system call arguments from user space
 
 static uint64 (*syscalls[])(void) = {
 [SYS_fork]    sys_fork,
@@ -129,8 +129,8 @@ static uint64 (*syscalls[])(void) = {
 [SYS_link]    sys_link,
 [SYS_mkdir]   sys_mkdir,
 [SYS_close]   sys_close,
-[SYS_trace]   sys_trace,  // add the ``trace" function stub
-[SYS_sysinfo] sys_sysinfo, // add the "sysinfo" function stub
+[SYS_trace]   sys_trace,  // 添加 trace 函数，add the ``trace" function stub
+[SYS_sysinfo] sys_sysinfo, // 添加 sysinfo 函数，add the "sysinfo" function stub
 };
 
 // add names of system calls
@@ -151,6 +151,7 @@ syscall(void)
                               // p->mask of the form (1 << SYS_fork) et al
     { // add the trace functionality
       // print the trace output
+      // 添加追踪功能
       printf("%d: syscall %s -> %d\n", 
               p->pid, syscalls_name[num], p->trapframe->a0);
     }

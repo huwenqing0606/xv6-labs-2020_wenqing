@@ -20,5 +20,5 @@
 #define SYS_link   19
 #define SYS_mkdir  20
 #define SYS_close  21
-#define SYS_trace  22 // system call number for "trace" to kernel
-#define SYS_sysinfo 23 // system call number for "sysinfo" to kernel
+#define SYS_trace  22 // trace 在内核的 system call number
+#define SYS_sysinfo 23 // sysinfo 在内核的 system call number
