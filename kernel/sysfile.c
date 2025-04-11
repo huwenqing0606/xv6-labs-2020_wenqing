@@ -486,6 +486,7 @@ sys_pipe(void)
   return 0;
 }
 
+// 添加 sysinfo 系统调用
 // add the sysinfo system call
 uint64
 sys_sysinfo(void)

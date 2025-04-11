@@ -698,12 +698,13 @@ procdump(void)
   }
 }
 
+// 计算 nproc 在 sysinfo 用到
 // nproc calculated the number of processes whose state is not UNUSED
 uint64
 nproc(void){
   int n=0; // number of processes whose state is not UNUSED
   int i;
-  for (i=1;i<NPROC;i++){
+  for (i=0;i<NPROC;i++){
     if (proc[i].state != UNUSED) n++;
   }
   return n;

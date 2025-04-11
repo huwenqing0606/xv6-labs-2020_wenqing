@@ -82,6 +82,7 @@ kalloc(void)
 }
 
 
+// 在闲置内存中取出给定的 bytes
 // freemem takes the number of bytes in the free memory
 uint64
 freemem(void){
