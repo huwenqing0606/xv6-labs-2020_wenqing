@@ -452,6 +452,7 @@ copyinstr(pagetable_t pagetable, char *dst, uint64 srcva, uint64 max)
 //  }
 }
 
+// 用递归打印 pagetable
 // print the page table 
 // recursively trace each level of the tree and print the page table
 void 
@@ -484,6 +485,7 @@ vmprint_recursion(pagetable_t pagetable, int level)
   } 
 }
 
+// 打印 pagetable
 void 
 vmprint(pagetable_t pagetable)
 {
