@@ -1,0 +1,52 @@
+RISC-V Assembly
+
+1. Which registers contain arguments to functions? For example, which register holds 13 in main's call to printf?
+
+Answer: 13 is held at a2, 12 is held at a1 and "%d %d\n" is held at a0.
+
+
+2. Where is the call to function f in the assembly code for main? Where is the call to g? (Hint: the compiler may inline functions.)
+
+Answer: There is no call to f or g, but compiler uses inline and directly computes 12.
+  2e:	45b1                	li	a1,12
+
+
+3. At what address is the function printf located?
+
+Answer: 3c:	608080e7          	jalr	1544(ra) # 640 <printf>
+    printf is located at address 0x640, pc jumps to here using jalr at address ra + 1544 bytes = 0x640
+
+
+4. What value is in the register ra just after the jalr to printf in main?
+
+Answer: jalr is at pc = 0x3c, pc + 4 is 0x40, saved at ra. So ra = 0x40
+3c:	608080e7          	jalr	1544(ra) # 640 <printf>
+current pc + 1544 then jump， but use ra to save return address. So jalr jumps to 0x3c+1544=0x640
+
+
+5. Run the following code.
+
+	unsigned int i = 0x00646c72;
+	printf("H%x Wo%s", 57616, &i);
+      
+What is the output? Here's an ASCII table that maps bytes to characters.
+The output depends on that fact that the RISC-V is little-endian. If the RISC-V were instead big-endian what would you set i to in order to yield the same output? Would you need to change 57616 to a different value?
+
+Here's a description of little- and big-endian and a more whimsical description.
+
+Answer: 57616_10 = e110_16, so output H%x = He110
+    RISC-V is little endian, so i is given by 72 6c 64 00
+    so output Wo%s = rld\0 (ASCII for 72 6c 64 00)
+    Total output = He110 World\0
+
+    If we were in big-endian, then i = 00 64 6c 72 will give Wo%s = \0
+    To output same as before we need i = 0x726c6400
+
+    But 57616 does not need to change since in either big/small endian 57616 in hex is e110
+
+
+6. In the following code, what is going to be printed after 'y='? (note: the answer is not a specific value.) Why does this happen?
+
+	printf("x=%d y=%d", 3);
+
+Answer: Undefined behavior. y takes values from stack, which is random number.
