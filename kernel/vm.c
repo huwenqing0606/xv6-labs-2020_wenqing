@@ -136,6 +136,7 @@ kvmpa(uint64 va)
   
   // has to change the kernel_pagetable to p->kernel_pagetable for the specific user process
   struct proc *p = myproc();
+  // 替换当前进程的kernel pagetable
   pte = walk(p->kernel_pagetable, va, 0);
   
   if(pte == 0)
@@ -493,6 +494,8 @@ vmprint(pagetable_t pagetable)
   vmprint_recursion(pagetable, 1);
 }
 
+// 初始化 kernel pagetable
+// 这里模仿kernel/vm.c里kvminit函数，用内核自己pagetable 初始化的方式初始化用户进程的kernel pagetable
 // create a copy of the global kernel page table for each single user process
 pagetable_t
 process_kernel_pagetable_init()
@@ -519,6 +522,7 @@ process_kernel_pagetable_init()
   return process_kernel_pagetable;
 }
 
+// 添加映射到用户进程的 kernel pagetable
 // add a mapping to the user page table.
 void
 uvmmap(pagetable_t pagetable, uint64 va, uint64 pa, uint64 sz, int perm)

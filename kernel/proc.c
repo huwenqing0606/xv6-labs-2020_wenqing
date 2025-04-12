@@ -123,6 +123,7 @@ found:
     return 0;
   }
 
+  // 添加kernel pagetable
   // allocate the copy of the kernel page table for user specific process
   p->kernel_pagetable = process_kernel_pagetable_init();
   if(p->kernel_pagetable == 0){
@@ -131,6 +132,10 @@ found:
     return 0;
   }
 
+  // 每个kernel pagetable都添加一个对自己kernel stack的映射，
+  // 未修改前，kernal stack初始化在kernel/proc.c/procinit里，
+  // 将stack初始化的部分移入proc.c/allocproc函数中，至此完成对allocproc函数的修改
+  // 把内核映射放到到进程的内核栈里
   // For each process's kernel page table, set a mapping for that process's kernel stack
   // Allocate a page for the process's kernel stack.
   // Map it high in memory, followed by an invalid guard page.
@@ -152,6 +157,10 @@ found:
   return p;
 }
 
+// 进程销毁部分添加上对kernel pagetable的释放，
+// 之前我们将kernel stack的初始化移入了allocproc函数中，
+// 原来它是放在了内核的kernel pagetable里，但现在放在了我们的kernel pagetable里，
+// 故先要对kernel stack进行查找释放
 // free a proc structure and the data hanging from it,
 // including user pages.
 // p->lock must be held.
@@ -162,6 +171,7 @@ freeproc(struct proc *p)
     kfree((void*)p->trapframe);
   p->trapframe = 0;
   
+  // 删除kernel stack
   // delete kernel stack
   if (p->kstack)
   {
@@ -174,6 +184,7 @@ freeproc(struct proc *p)
   if(p->pagetable)
     proc_freepagetable(p->pagetable, p->sz);
 
+  // 删除 kernel pagetable
   // free the kernel pagetable of the process
   if(p->kernel_pagetable)
     proc_freekernelpagetable(p->kernel_pagetable);
@@ -232,6 +243,9 @@ proc_freepagetable(pagetable_t pagetable, uint64 sz)
   uvmfree(pagetable, sz);
 }
 
+// 对kernel pagetable的释放
+// 模仿vm.c中的freewalk，但注意物理地址没有释放
+// 最后一层叶节点没有释放，标志位并没有重置
 // Free a process's kernel page table
 // we must free a page table without also freeing the leaf physical memory pages
 // mimicking freewalk() in vm.c but did some small changes
@@ -549,6 +563,9 @@ scheduler(void)
         p->state = RUNNING;
         c->proc = p;
 
+        // 在进程进行切换的时候把自己的kernel pagetable放入到stap寄存器里，
+        // 让内核使用该进程的pagetable转换地址，
+        // 如果没有进程在运行，就使用内核自己的kernel pagetable，
         // load the process's kernel page table into the core's satp register 
         // see kvminithart() for inspiration 
         // save the kernel page table of the current process into the satp register
@@ -570,6 +587,7 @@ scheduler(void)
     if(found == 0) {
       intr_on();
       
+      // 没有进程在运行则使用内核原来的kernel pagtable
       // use kernel_pagetable when no process is running 
       // this is done in kvminithart(), so we just call kvminithart() in vm.c
       kvminithart();

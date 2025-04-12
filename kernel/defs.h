@@ -108,6 +108,7 @@ void            yield(void);
 int             either_copyout(int user_dst, uint64 dst, void *src, uint64 len);
 int             either_copyin(void *dst, int user_src, uint64 src, uint64 len);
 void            procdump(void);
+// 定义 proc_freekernelpagetable
 // claim proc_freekernelpagetable
 void            proc_freekernelpagetable(pagetable_t);
 
@@ -187,6 +188,7 @@ int             copyinstr(pagetable_t, char *, uint64, uint64);
 // define vmprint that prints a pagetable, uses the recursion function vmprint_recursion 
 void            vmprint(pagetable_t);
 void            vmprint_recursion(pagetable_t, int);
+// 定义 process_kernel_pagetable_init() 和 uvmmap()
 // define process_kernel_pagetable_init() and uvmmap()
 pagetable_t     process_kernel_pagetable_init();
 void            uvmmap();
