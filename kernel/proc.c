@@ -297,7 +297,7 @@ userinit(void)
 
   // 将用户页表拷贝至用户特有的内核页表
   // copy the user pagetable to its user-specifit kernel pagetable
-  u2kvmcopy(p->pagetable, p->kernel_pagetable, 0, p->sz);
+  //u2kvmcopy(p->pagetable, p->kernel_pagetable, 0, p->sz);
 
   // prepare for the very first "return" from kernel to user.
   p->trapframe->epc = 0;      // user program counter
@@ -329,7 +329,7 @@ growproc(int n)
       return -1;
     // 将用户页表拷贝至用户特有的内核页表
     // copy the user pagetable to its user-specifit kernel pagetable
-    u2kvmcopy(p->pagetable, p->kernel_pagetable, sz-n, sz);
+    //u2kvmcopy(p->pagetable, p->kernel_pagetable, sz-n, sz);
     }
   } else if(n < 0){
     sz = uvmdealloc(p->pagetable, sz, sz + n);
@@ -376,7 +376,7 @@ fork(void)
 
   // 将用户页表拷贝至用户特有的内核页表
   // copy the user pagetable to its user-specifit kernel pagetable
-  u2kvmcopy(np->pagetable, np->kernel_pagetable, 0, np->sz);
+  //u2kvmcopy(np->pagetable, np->kernel_pagetable, 0, np->sz);
 
   safestrcpy(np->name, p->name, sizeof(p->name));
 
