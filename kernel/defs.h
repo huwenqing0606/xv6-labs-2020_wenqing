@@ -80,6 +80,8 @@ int             pipewrite(struct pipe*, uint64, int);
 void            printf(char*, ...);
 void            panic(char*) __attribute__((noreturn));
 void            printfinit(void);
+// 声明 backtrace 函数
+void            backtrace(void);
 
 // proc.c
 int             cpuid(void);

@@ -132,3 +132,30 @@ printfinit(void)
   initlock(&pr.lock, "pr");
   pr.locking = 1;
 }
+
+// 实现 backtrace 函数
+// 打印栈帧
+void 
+backtrace(void)
+{
+  // 读当前帧指针 fp
+  uint64 fp = r_fp();
+  // 找到栈底结束
+  // PGROUNDDOWN(fp)和PGROUNDUP(fp)用于获取堆栈的栈顶和栈底，
+  // 这里我们使用PGROUNDUP(fp)获取栈底作为循环的边界
+  uint64 bottom = PGROUNDUP(fp);
+  uint64 return_addr;
+  
+  printf("backtrace:\n");
+  while (fp < bottom)
+  {
+    // 首先堆栈地址从从栈底到栈顶地址大小由高到低，sp随着栈帧的添加地址减小，
+    // fp这里指向的是栈帧的顶部也就是就是比return address高8，
+    // fp-16就是to prev frame前一个函数的栈帧指针的地址
+    // 下一个栈帧指针地址 = fp - 8
+    // 返回值地址 = fp - 16
+    return_addr = *(uint64*)(fp-8);
+    fp = *(uint64*)(fp-16);
+    printf("%p\n", return_addr);
+  }
+}

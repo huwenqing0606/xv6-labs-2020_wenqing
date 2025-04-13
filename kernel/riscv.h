@@ -352,3 +352,18 @@ sfence_vma()
 
 typedef uint64 pte_t;
 typedef uint64 *pagetable_t; // 512 PTEs
+
+
+
+// 读当前帧指针
+// 在 RISC-V 架构下，GCC默认把帧指针（frame pointer）存到 s0 寄存器中。
+static inline uint64
+r_fp()
+{
+  uint64 x;
+  // "mv %0, s0" 是RISC-V指令：把寄存器 s0 的值拷贝到一个目标寄存器 %0
+  // : "=r" (x) 告诉编译器：x 是一个输出操作数，放在某个通用寄存器中 (r 代表寄存器)。
+  asm volatile("mv %0, s0" : "=r" (x) );
+  // 返回读到的 s0 寄存器的值
+  return x;
+}
