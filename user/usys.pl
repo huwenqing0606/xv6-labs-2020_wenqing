@@ -36,3 +36,6 @@ entry("getpid");
 entry("sbrk");
 entry("sleep");
 entry("uptime");
+# 增加 sigalarm 和 sigreturn
+entry("sigalarm");
+entry("sigreturn");

@@ -103,4 +103,54 @@ struct proc {
   struct file *ofile[NOFILE];  // Open files
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
+
+  // sigalarm 和 sigreturn 需要的信息
+  void (*handler)();           // process alarm handler 函数
+  int alarm_interval;          // 时间间隔
+  int total_ticks;             // 判断走过滴答数
+
+  // proc结构体需要添加标志位防止在自定义函数执行之前又达到了可执行自定义函数的情况
+  int is_handler_in;           // 判断是否还在alarm函数里
+
+  // 当用户进入内核时会将当前程序计数器PC存到spec里，
+  // 然后从内核返回的时候再load进来，
+  // 这时如果我们将spec（程序里是trapframe->epc）换成我们获取的自定义函数的地址，
+  // 然后就会返回时进入自定义函数的地址，然后为了调用函数完成之后返回正确的地址，
+  // 则需要在sys_sigreturn里重新将trapframe->epc的值给赋值成原来的，
+  // 所以需要存下历史trapframe->epc的值，
+  // 与此同时，不光是epc会因为时钟中断而丢失，其他寄存器值也需要保存，
+  // 故proc.h里的struct proc需要添加历史寄存器属性
+  // 需要保存的历史寄存器用
+  uint64 his_epc;           
+  uint64 his_ra;
+  uint64 his_sp;
+  uint64 his_gp;
+  uint64 his_tp;
+  uint64 his_t0;
+  uint64 his_t1;
+  uint64 his_t2;
+  uint64 his_t3;
+  uint64 his_t4;
+  uint64 his_t5;
+  uint64 his_t6;
+  uint64 his_a0;
+  uint64 his_a1;
+  uint64 his_a2;
+  uint64 his_a3;
+  uint64 his_a4;
+  uint64 his_a5;
+  uint64 his_a6;
+  uint64 his_a7;
+  uint64 his_s0;
+  uint64 his_s1;
+  uint64 his_s2;
+  uint64 his_s3;
+  uint64 his_s4;
+  uint64 his_s5;
+  uint64 his_s6;
+  uint64 his_s7;
+  uint64 his_s8;
+  uint64 his_s9;
+  uint64 his_s10;
+  uint64 his_s11;
 };

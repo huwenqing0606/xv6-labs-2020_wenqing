@@ -77,8 +77,63 @@ usertrap(void)
     exit(-1);
 
   // give up the CPU if this is a timer interrupt.
-  if(which_dev == 2)
+  if(which_dev == 2) {
+    // 添加 p->total_ticks 计数
+    p->total_ticks += 1;
+    printf("total_ticks %d, alarm_interval %d, is_handler_in %d \n", p->total_ticks, p->alarm_interval, p->is_handler_in);
+    if (p->total_ticks == p->alarm_interval)
+    {
+      if (p->is_handler_in)
+      {
+        p->is_handler_in = 0;
+
+        // 保存当前trampframe上的用户寄存器
+        // 用于alarm函数调用完之后
+        p->his_epc = p->trapframe->epc; 
+        p->his_ra = p->trapframe->ra;
+        p->his_sp = p->trapframe->sp;
+        p->his_gp = p->trapframe->gp;
+        p->his_tp = p->trapframe->tp;
+        p->his_t0 = p->trapframe->t0;
+        p->his_t1 = p->trapframe->t1;
+        p->his_t2 = p->trapframe->t2;
+        p->his_t3 = p->trapframe->t3;
+        p->his_t4 = p->trapframe->t4;
+        p->his_t5 = p->trapframe->t5;
+        p->his_t6 = p->trapframe->t6;
+        p->his_a0 = p->trapframe->a0;
+        p->his_a1 = p->trapframe->a1;
+        p->his_a2 = p->trapframe->a2;
+        p->his_a3 = p->trapframe->a3;
+        p->his_a4 = p->trapframe->a4;
+        p->his_a5 = p->trapframe->a5;
+        p->his_a6 = p->trapframe->a6;
+        p->his_a7 = p->trapframe->a7;
+        p->his_s0 = p->trapframe->s0;
+        p->his_s1 = p->trapframe->s1;
+        p->his_s2 = p->trapframe->s2;
+        p->his_s3 = p->trapframe->s3;
+        p->his_s4 = p->trapframe->s4;
+        p->his_s5 = p->trapframe->s5;
+        p->his_s6 = p->trapframe->s6;
+        p->his_s7 = p->trapframe->s7;
+        p->his_s8 = p->trapframe->s8;
+        p->his_s9 = p->trapframe->s9;
+        p->his_s10 = p->trapframe->s10;
+        p->his_s11 = p->trapframe->s11;
+
+        // 将当前PC值改为alarm函数的地址
+        // 当函数从内核返回时调用handler
+        p->trapframe->epc = (uint64)p->handler;
+
+        p->total_ticks = 0;
+      } else {
+        p->total_ticks -= 1;
+      }
+    }
+
     yield();
+  }
 
   usertrapret();
 }

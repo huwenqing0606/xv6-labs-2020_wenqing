@@ -158,6 +158,7 @@ mkfs/mkfs: mkfs/mkfs.c $K/fs.h $K/param.h
 # http://www.gnu.org/software/make/manual/html_node/Chained-Rules.html
 .PRECIOUS: %.o
 
+# 将 alarmtest 加入作为一个 user program
 UPROGS=\
 	$U/_cat\
 	$U/_echo\
@@ -175,8 +176,7 @@ UPROGS=\
 	$U/_grind\
 	$U/_wc\
 	$U/_zombie\
-
-
+	$U/_alarmtest\
 
 
 ifeq ($(LAB),$(filter $(LAB), pgtbl lock))
