@@ -47,16 +47,19 @@ sys_sbrk(void)
   if(argint(0, &n) < 0)
     return -1;
   addr = myproc()->sz;
+  // 处理 sbrk() 负参数的情况
   // handle negative sbrk() arguments
   if (n<0) {
       if (myproc()->sz+n<0) return -1;
       else uvmdealloc(myproc()->pagetable, myproc()->sz, myproc()->sz+n);
   }
+  // 新的 sbrk(n) 只增加进程的 size
   // the new sbrk(n) just increments the process's size (myproc()->sz) by n
   myproc()->sz += n;
+  // 新的 sbrk(n) 不分配内存，所以我们不调用 growproc(n)
   // the new sbrk(n) does not allocate memory - so we delete the call to growproc() 
-  //if(growproc(n) < 0)
-  //  return -1;
+  if(growproc(n) < 0)
+    return -1;
   return addr;
 }
 
