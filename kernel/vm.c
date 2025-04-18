@@ -107,6 +107,7 @@ walkaddr(pagetable_t pagetable, uint64 va)
   //  return 0;
   //if((*pte & PTE_V) == 0)
   //  return 0;
+  // 当系统调用时，得到地址如果找不到相应的物理地址时需要，添加相应物理地址映射到page table里
   if(pte == 0 || (*pte & PTE_V) == 0)
   // Handle the case in which a process passes a valid address from sbrk() to a system 
   // call such as read or write, but the memory for that address has not yet been allocated
@@ -208,7 +209,8 @@ uvmunmap(pagetable_t pagetable, uint64 va, uint64 npages, int do_free)
       // panic("uvmunmap: not mapped");  // ignore this part for task "Lazy allocation"
       continue;
     if(PTE_FLAGS(*pte) == PTE_V)
-      panic("uvmunmap: not a leaf");
+      // panic("uvmunmap: not a leaf");
+      continue;
     if(do_free){
       uint64 pa = PTE2PA(*pte);
       kfree((void*)pa);
@@ -337,6 +339,8 @@ uvmcopy(pagetable_t old, pagetable_t new, uint64 sz)
   char *mem;
 
   for(i = 0; i < sz; i += PGSIZE){
+    // 子进程复制父进程地址空间的时候，发现地址空间不存在时需要忽略
+    // Handle the parent-to-child memory copy in fork() correctly.
     if((pte = walk(old, i, 0)) == 0)
       // ignore the panic when fork() calls uvmcopy() and 
       // child copies parent's address space but that memory does not exist 

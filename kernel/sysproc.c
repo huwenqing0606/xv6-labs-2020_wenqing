@@ -58,8 +58,8 @@ sys_sbrk(void)
   myproc()->sz += n;
   // 新的 sbrk(n) 不分配内存，所以我们不调用 growproc(n)
   // the new sbrk(n) does not allocate memory - so we delete the call to growproc() 
-  if(growproc(n) < 0)
-    return -1;
+  //if(growproc(n) < 0)
+  //  return -1;
   return addr;
 }
 

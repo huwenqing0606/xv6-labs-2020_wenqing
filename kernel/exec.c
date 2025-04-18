@@ -54,6 +54,7 @@ exec(char *path, char **argv)
     sz = sz1;
     if(ph.vaddr % PGSIZE != 0)
       goto bad;
+    // exec函数将虚拟地址传入walkaddr函数里得到相应物理地址
     if(loadseg(pagetable, ph.vaddr, ip, ph.off, ph.filesz) < 0)
       goto bad;
   }

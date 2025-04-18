@@ -94,6 +94,7 @@ usertrap(void)
         }
     }
     else
+        // 当发现缺页异常时，读入虚拟地址比p->sz大，或者当虚拟地址比进程的用户栈还小，或者申请空间不够的时候终止进程
         // kill a process if it page-faults on a virtual memory address in the following cases:
         // (a) higher than any allocated with sbrk()
         // (b) faults on the invalid page below the user stack
