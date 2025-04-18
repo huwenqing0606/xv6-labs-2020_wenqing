@@ -71,12 +71,13 @@ usertrap(void)
   {
     // ok
   } 
+  // 在usertrap函数里，检查r_scause()函数返回值是否为15或者13，然后通过r_stval函数获取出现问题的虚拟地址
   else if (r_scause() == 15 || r_scause() == 13) // check whether a fault is a page fault 
                                                  // by seeing if r_scause() is 13 or 15
   {
     uint64 va = r_stval(); // r_stval() returns the RISC-V stval register, 
                            // which contains the virtual address that caused the page fault
-    printf("page fault %p\n", va); // print the virtual address of the page fault
+    //printf("page fault %p\n", va); // print the virtual address of the page fault
     if (va < p->sz && va > PGROUNDDOWN(p->trapframe->sp)) { 
         uint64 ka = (uint64) kalloc();
         if (ka == 0) 

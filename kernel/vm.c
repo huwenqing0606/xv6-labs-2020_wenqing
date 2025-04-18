@@ -199,6 +199,7 @@ uvmunmap(pagetable_t pagetable, uint64 va, uint64 npages, int do_free)
   if((va % PGSIZE) != 0)
     panic("uvmunmap: not aligned");
 
+  // 消除 uvmunmap() will panic; modify it to not panic if some pages aren't mapped.
   for(a = va; a < va + npages*PGSIZE; a += PGSIZE){
     if((pte = walk(pagetable, a, 0)) == 0)
       // panic("uvmunmap: walk");   // ignore this part for task "Lazy allocation"
