@@ -305,13 +305,17 @@ uvmfree(pagetable_t pagetable, uint64 sz)
 // physical memory.
 // returns 0 on success, -1 on failure.
 // frees any allocated pages on failure.
+// 修改uvmcopy，在复制的时候，不申请空间，将子进程的 pagetable 的PTE映射
+//  到父进程的物理地址，清除PTE_W并添加PTE_COW标志，识别是否需要申请新页用于修改
+// Modify uvmcopy() to map the parent's physical pages into the child, 
+//  instead of allocating new pages. Clear PTE_W in the PTEs of both child and parent.
 int
 uvmcopy(pagetable_t old, pagetable_t new, uint64 sz)
 {
   pte_t *pte;
   uint64 pa, i;
   uint flags;
-  char *mem;
+  //char *mem;
 
   for(i = 0; i < sz; i += PGSIZE){
     if((pte = walk(old, i, 0)) == 0)
@@ -320,11 +324,28 @@ uvmcopy(pagetable_t old, pagetable_t new, uint64 sz)
       panic("uvmcopy: page not present");
     pa = PTE2PA(*pte);
     flags = PTE_FLAGS(*pte);
-    if((mem = kalloc()) == 0)
-      goto err;
-    memmove(mem, (char*)pa, PGSIZE);
-    if(mappages(new, i, PGSIZE, (uint64)mem, flags) != 0){
-      kfree(mem);
+    // 移除复制的时候申请空间的部分
+    //if((mem = kalloc()) == 0)
+    //  goto err;
+    //memmove(mem, (char*)pa, PGSIZE);
+    //if(mappages(new, i, PGSIZE, (uint64)mem, flags) != 0){
+    //  kfree(mem);
+    //  goto err;
+    //}
+    // 只对于可写空间进行标记
+    if (flags & PTE_W) 
+    // 检查当前页表项是否具有可写权限(PTE_W)，只有在页是“写的”，我们才需要把它转换成 Copy-On-Write 的形式
+    {
+      // flags | PTE_COW: 在 flags 中添加 PTE_COW 这个标志，不影响其他位（"位掩码"操作）
+      // & (~PTE_W): 清除 PTE_W 将该位置设置为 0, 清除写权限，进程再写这个页时会触发 page fault（因为页是只读的），操作系统就可以介入复制。
+      flags = (flags | PTE_COW) & (~PTE_W);
+      // 把物理地址转换为页表项格式
+      // | flags: 把上面处理过的新标志位加进去（不含 PTE_W，但包含 PTE_COW）
+      *pte = PA2PTE(pa) | flags;
+    }
+    // 增加 reference count
+    increase_rc((void*)pa);
+    if(mappages(new, i, PGSIZE, pa, flags) != 0){
       goto err;
     }
   }
@@ -351,6 +372,8 @@ uvmclear(pagetable_t pagetable, uint64 va)
 // Copy from kernel to user.
 // Copy len bytes from src to virtual address dstva in a given page table.
 // Return 0 on success, -1 on error.
+// 修改copyout，用同样的方式处理 page fault for COW page
+// Modify copyout() to use the same scheme as page faults when it encounters a COW page.
 int
 copyout(pagetable_t pagetable, uint64 dstva, char *src, uint64 len)
 {
@@ -358,6 +381,11 @@ copyout(pagetable_t pagetable, uint64 dstva, char *src, uint64 len)
 
   while(len > 0){
     va0 = PGROUNDDOWN(dstva);
+
+    // page-fault 发生在 COW page，分配新的页表并拷贝旧的页表, 为新的页表设置 PTE_W
+    if (cow_alloc(pagetable, va0) != 0)
+    return -1;
+
     pa0 = walkaddr(pagetable, va0);
     if(pa0 == 0)
       return -1;
