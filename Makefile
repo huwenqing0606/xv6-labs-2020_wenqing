@@ -132,6 +132,7 @@ mkfs/mkfs: mkfs/mkfs.c $K/fs.h $K/param.h
 # http://www.gnu.org/software/make/manual/html_node/Chained-Rules.html
 .PRECIOUS: %.o
 
+# 添加sleep，其他类同
 UPROGS=\
 	$U/_cat\
 	$U/_echo\
@@ -149,7 +150,6 @@ UPROGS=\
 	$U/_grind\
 	$U/_wc\
 	$U/_zombie\
-	# 添加sleep，其他类同
 	$U/_sleep\
 	$U/_pingpong\
 	$U/_primes\
