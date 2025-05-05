@@ -380,6 +380,7 @@ bmap(struct inode *ip, uint bn)
   uint addr, *a;
   struct buf *bp;
 
+  // direct block 直接块
   if(bn < NDIRECT){
     if((addr = ip->addrs[bn]) == 0)
       ip->addrs[bn] = addr = balloc(ip->dev);
@@ -387,6 +388,7 @@ bmap(struct inode *ip, uint bn)
   }
   bn -= NDIRECT;
 
+  // singly indirect block 一级间接块
   if(bn < NINDIRECT){
     // Load indirect block, allocating if necessary.
     if((addr = ip->addrs[NDIRECT]) == 0)
@@ -401,11 +403,43 @@ bmap(struct inode *ip, uint bn)
     return addr;
   }
 
+  bn -= NINDIRECT;
+  // doubly indirect block 二级间接块
+  if(bn < NDOUBLE){
+    // 1. 分配 doubly-indirect block if needed
+    if((addr = ip->addrs[NDIRECT + 1]) == 0)
+      ip->addrs[NDIRECT + 1] = addr = balloc(ip->dev);
+    // 2. 读取 doubly-indirect block
+    bp = bread(ip->dev, addr);
+    a = (uint*)bp->data;
+    // 3. 一级间接块索引 = 第几组（256 个为一组）
+    uint idx1 = bn / NINDIRECT;
+    uint idx2 = bn % NINDIRECT;
+    // 4. 分配一级间接块 if needed
+    if((addr = a[idx1]) == 0){
+      a[idx1] = addr = balloc(ip->dev);
+      log_write(bp);  // 修改 doubly block 后写日志
+    }
+    brelse(bp);
+    // 5. 读取一级间接块
+    bp = bread(ip->dev, addr);
+    a = (uint*)bp->data;
+    // 6. 分配数据块 if needed
+    if((addr = a[idx2]) == 0){
+      a[idx2] = addr = balloc(ip->dev);
+      log_write(bp);
+    }
+    brelse(bp);
+    return addr;
+  }
+  
   panic("bmap: out of range");
 }
 
 // Truncate inode (discard contents).
 // Caller must hold ip->lock.
+// 修改 itrunc() 以释放 doubly-indirect 块中的所有数据块
+// Make sure itrunc frees all blocks of a file, including double-indirect blocks.
 void
 itrunc(struct inode *ip)
 {
@@ -413,6 +447,7 @@ itrunc(struct inode *ip)
   struct buf *bp;
   uint *a;
 
+  // 直接块
   for(i = 0; i < NDIRECT; i++){
     if(ip->addrs[i]){
       bfree(ip->dev, ip->addrs[i]);
@@ -420,6 +455,7 @@ itrunc(struct inode *ip)
     }
   }
 
+  // 一级间接块
   if(ip->addrs[NDIRECT]){
     bp = bread(ip->dev, ip->addrs[NDIRECT]);
     a = (uint*)bp->data;
@@ -430,6 +466,28 @@ itrunc(struct inode *ip)
     brelse(bp);
     bfree(ip->dev, ip->addrs[NDIRECT]);
     ip->addrs[NDIRECT] = 0;
+  }
+
+  // 二级间接块
+  if(ip->addrs[NDIRECT+1]){
+      struct buf *bp_doubly = bread(ip->dev, ip->addrs[NDIRECT+1]);
+      uint *dp = (uint*)bp_doubly->data;
+      for(int i = 0; i < NINDIRECT; i++){
+          if(dp[i]){
+              struct buf *bp_single = bread(ip->dev, dp[i]);
+              uint *sp = (uint*)bp_single->data;
+              for(int j = 0; j < NINDIRECT; j++){
+                  if(sp[j]){
+                      bfree(ip->dev, sp[j]);
+                  }
+              }
+              brelse(bp_single);
+              bfree(ip->dev, dp[i]);
+          }
+      }
+      brelse(bp_doubly);
+      bfree(ip->dev, ip->addrs[NDIRECT+1]);
+      ip->addrs[NDIRECT+1] = 0;
   }
 
   ip->size = 0;
