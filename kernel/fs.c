@@ -416,21 +416,23 @@ bmap(struct inode *ip, uint bn)
     uint idx1 = bn / NINDIRECT;
     uint idx2 = bn % NINDIRECT;
     // 4. 分配一级间接块 if needed
-    if((addr = a[idx1]) == 0){
-      a[idx1] = addr = balloc(ip->dev);
+    uint addr1;
+    if((addr1 = a[idx1]) == 0){
+      a[idx1] = addr1 = balloc(ip->dev);
       log_write(bp);  // 修改 doubly block 后写日志
     }
     brelse(bp);
     // 5. 读取一级间接块
-    bp = bread(ip->dev, addr);
+    bp = bread(ip->dev, addr1);
     a = (uint*)bp->data;
     // 6. 分配数据块 if needed
-    if((addr = a[idx2]) == 0){
-      a[idx2] = addr = balloc(ip->dev);
+    uint addr2;
+    if((addr2 = a[idx2]) == 0){
+      a[idx2] = addr2 = balloc(ip->dev);
       log_write(bp);
     }
     brelse(bp);
-    return addr;
+    return addr2;
   }
   
   panic("bmap: out of range");
