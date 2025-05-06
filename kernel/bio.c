@@ -92,19 +92,36 @@ bget(uint dev, uint blockno)
 
   // Not cached.
   // Recycle the least recently used (LRU) unused buffer.
-  // 但如果没找到，就去其他hash桶里偷个来放自己所属的缓冲区里，
-  // 遍历桶的指标j
-  for (int j = hash(blockno+1); j != id; j = (j + 1) % NBUCKETS) {
+  // 如果没找到相应缓冲区，则试图找一个未被使用的 LRU buffer
+  // 1. 先在当前的桶里面找有无空余的buffer
+  for(b = bcache.head[id].prev; b != &bcache.head[id]; b = b->prev){
+    if(b->refcnt == 0){
+      b->dev = dev;
+      b->blockno = blockno;
+      b->valid = 0;
+      b->refcnt = 1;
+      release(&bcache.lock[id]);
+      acquiresleep(&b->lock);
+      return b;
+    }
+  }
+  release(&bcache.lock[id]);
+  // 2. 从另一个桶找一个未被使用的buffer
+  for(int j = (id + 1) % NBUCKETS; j != id; j = (j + 1) % NBUCKETS){
+    acquire(&bcache.lock[j]);
     for(b = bcache.head[j].prev; b != &bcache.head[j]; b = b->prev){
-      if(b->refcnt == 0) {
+      if(b->refcnt == 0){
+        // Remove from old bucket
+        b->next->prev = b->prev;
+        b->prev->next = b->next;
+        // Set up new block info
         b->dev = dev;
         b->blockno = blockno;
         b->valid = 0;
         b->refcnt = 1;
-        // 将别的hash桶里缓冲区放入当前id的缓冲区中
-        b->next->prev = b->prev;
-        b->prev->next = b->next;
+        // Move to new bucket
         release(&bcache.lock[j]);
+        acquire(&bcache.lock[id]);
         b->next = bcache.head[id].next;
         b->prev = &bcache.head[id];
         bcache.head[id].next->prev = b;
@@ -116,6 +133,7 @@ bget(uint dev, uint blockno)
     }
     release(&bcache.lock[j]);
   }
+
   // 如果别的hash桶里没有的话就报错
   panic("bget: no buffers");
 }
