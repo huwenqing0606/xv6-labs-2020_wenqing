@@ -1,6 +1,7 @@
 #define T_DIR     1   // Directory
 #define T_FILE    2   // File
 #define T_DEVICE  3   // Device
+#define T_SYMLINK 4   // 新的文件类型 T_SYMLINK 用来表示一个 symbolic link
 
 struct stat {
   int dev;     // File system's disk device

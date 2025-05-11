@@ -48,6 +48,7 @@ void            iunlockput(struct inode*);
 void            iupdate(struct inode*);
 int             namecmp(const char*, const char*);
 struct inode*   namei(char*);
+struct inode*   namei_follow(char*, int);   // 声明 namei_follow, 能支持 symlink 的递归跟随
 struct inode*   nameiparent(char*, char*);
 int             readi(struct inode*, int, uint64, uint, uint);
 void            stati(struct inode*, struct stat*);

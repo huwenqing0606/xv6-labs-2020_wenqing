@@ -304,7 +304,12 @@ sys_open(void)
       return -1;
     }
   } else {
-    if((ip = namei(path)) == 0){
+    //if((ip = namei(path)) == 0){
+    //  end_op();
+    //  return -1;
+    //}
+    // 支持 O_NOFOLLOW 和 symlink 跟随逻辑
+    if ((ip = namei_follow(path, !(omode & O_NOFOLLOW))) == 0) {
       end_op();
       return -1;
     }
@@ -482,5 +487,48 @@ sys_pipe(void)
     fileclose(wf);
     return -1;
   }
+  return 0;
+}
+
+// 实现 symlink 系统调用
+// creates a new symbolic link at path that refers to file named by target
+uint64
+sys_symlink(void)
+{
+  char target[MAXPATH], path[MAXPATH];
+  struct inode *ip;
+
+  // target 是符号链接指向的路径 (如 "foo.txt")
+  // path 是要创建的新符号链接名 (如 "bar.lnk")
+  // 使用 argstr() 从用户空间读取两个字符串 (分别在 a0、a1)
+  if(argstr(0, target, MAXPATH) < 0 || argstr(1, path, MAXPATH) < 0)
+    return -1;
+
+  // begin_op() 开启文件系统事务
+  // 使用 create() 创建一个新文件，类型为 T_SYMLINK
+  // ip 是新创建的符号链接的 inode 指针
+  // create() 内部会调用 nameiparent() 找到父目录，并调用 ialloc() 分配 inode
+  begin_op();
+  if((ip = create(path, T_SYMLINK, 0, 0)) == 0){
+    end_op();
+    return -1;
+  }
+
+  // 写入 symlink 的目标路径 target 到 inode 的数据块中
+  // 使用 writei() 把字符串写入 offset=0 开始的地方
+  // 注意：用的是 strlen(target)，不包括末尾 \0
+  // You will need to choose somewhere to store the target path of a symbolic link, for example, in the inode's data blocks.
+  if(writei(ip, 0, (uint64)target, 0, strlen(target)) != strlen(target)){
+    iunlockput(ip);
+    end_op();
+    return -1;
+  }
+
+  // iunlockput()：释放 inode 的锁并递减引用计数
+  // end_op()：提交事务，写入磁盘
+  iunlockput(ip);
+  end_op();
+
+  // 返回值为 uint64，0 表示成功，-1 表示失败
   return 0;
 }

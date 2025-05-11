@@ -727,6 +727,43 @@ namei(char *path)
   return namex(path, 0, name);
 }
 
+// namei() 的升级版，能支持 symlink 的递归跟随
+// 返回由路径 path 指定的最终 inode，如果路径中有符号链接（T_SYMLINK），则根据 follow 参数决定是否递归解析
+// 参数 follow 决定是否跟随 symlink，0 表示不跟随，1 表示跟随
+struct inode*
+namei_follow(char *path, int follow)
+{
+  // 初始化和第一次路径解析
+  // 通过 namex() 找到路径对应的 inode
+  // namex(..., 0, name) 这里的 name 没用，仅满足函数签名
+  // 返回的是目标路径对应的 inode*
+  struct inode *ip;
+  char name[DIRSIZ];
+  int depth = 0;
+
+  ip = namex(path, 0, name);
+
+  // 只要：follow == 1， ip 有效， 并且它是一个 T_SYMLINK 类型
+  // 就进入循环处理它
+  while (follow && ip && ip->type == T_SYMLINK) {
+    ilock(ip);
+    // readi() 会把 symlink inode 中存储的目标路径（如 "../real.txt"）读入 buf 中
+    // buf 添加 \0 结尾，构成字符串
+    char buf[MAXPATH+1];
+    int len = readi(ip, 0, (uint64)buf, 0, MAXPATH);
+    buf[len] = 0;
+    // 释放旧的 symlink inode（释放锁并递减引用）
+    iunlockput(ip);
+    // 如果递归次数超过 10 次，返回错误，防止挂死。
+    if(++depth > 10)
+      return 0;
+    // 重新对读取到的目标路径递归执行 namex，可能再次得到一个 symlink，从而继续循环。
+    ip = namex(buf, 0, name);
+  }
+  // 返回最终 inode
+  return ip;
+}
+
 struct inode*
 nameiparent(char *path, char *name)
 {
