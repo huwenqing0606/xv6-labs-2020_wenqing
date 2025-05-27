@@ -82,6 +82,24 @@ struct trapframe {
 
 enum procstate { UNUSED, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
 
+// 每个进程添加 虚拟内存区域表 (VMA list, virtual memory area)，挂载在 struct proc
+// Keep track of what mmap has mapped for each process. 
+//  Define a structure corresponding to the VMA (virtual memory area) 
+//  described in Lecture 15, recording the address, length, permissions, file, etc. 
+//  for a virtual memory range created by mmap. Since the xv6 kernel doesn't 
+//  have a memory allocator in the kernel, it's OK to declare a fixed-size array 
+//  of VMAs and allocate from that array as needed. A size of 16 should be sufficient.
+#define MAX_VMA 16
+struct vma {
+  int used;
+  uint64 addr;
+  uint64 length;
+  int prot;
+  int flags;
+  struct file *f;
+  int file_offset;
+};
+
 // Per-process state
 struct proc {
   struct spinlock lock;
@@ -103,4 +121,7 @@ struct proc {
   struct file *ofile[NOFILE];  // Open files
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
+
+  // 挂载 vma
+  struct vma vmas[MAX_VMA];
 };

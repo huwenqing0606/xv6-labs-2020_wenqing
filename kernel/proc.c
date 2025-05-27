@@ -5,6 +5,10 @@
 #include "spinlock.h"
 #include "proc.h"
 #include "defs.h"
+#include "fs.h"
+#include "sleeplock.h"
+#include "file.h"
+#include "fcntl.h"
 
 struct cpu cpus[NCPU];
 
@@ -296,6 +300,18 @@ fork(void)
       np->ofile[i] = filedup(p->ofile[i]);
   np->cwd = idup(p->cwd);
 
+  // 复制 VMA 表
+  // Modify fork to ensure that the child has the same mapped regions as the parent. 
+  //  Don't forget to increment the reference count for a VMA's struct file. 
+  //  In the page fault handler of the child, it is OK to allocate a new physical 
+  //  page instead of sharing a page with the parent.
+  for (i = 0; i < MAX_VMA; i++) {
+    if (p->vmas[i].used) {
+      np->vmas[i] = p->vmas[i];
+      np->vmas[i].f = filedup(p->vmas[i].f); // 增加文件引用
+    }
+  }
+
   safestrcpy(np->name, p->name, sizeof(p->name));
 
   pid = np->pid;
@@ -344,6 +360,42 @@ exit(int status)
   if(p == initproc)
     panic("init exiting");
 
+  // 在释放所有文件描述符之前（也就是在 fileclose() 执行前）先处理 VMA（Virtual Memory Area）清理和写回。
+  // 清理所有 VMA 映射并写回修改（如果是 MAP_SHARED 且可写）
+  // Modify exit to unmap the process's mapped regions as if munmap had been called.
+  for (int i = 0; i < MAX_VMA; i++) {
+    // 类似于 munmap 的写法
+    struct vma *v = &p->vmas[i];
+    if (!v->used)
+     continue;
+    if ((v->flags & MAP_SHARED) && (v->prot & PROT_WRITE) && (v->f->writable)) {
+      for (uint64 a = v->addr; a < v->addr + v->length; a += PGSIZE) {
+        pte_t *pte = walk(p->pagetable, a, 0);
+        if (pte && (*pte & PTE_V)) {
+          uint64 pa = PTE2PA(*pte);
+          begin_op();
+          ilock(v->f->ip);
+          writei(v->f->ip, 0, pa, a - v->addr + v->file_offset, PGSIZE);
+          iunlock(v->f->ip);
+          end_op();}
+      }
+    }
+    // 只对实际映射过的地址调用 uvmunmap
+    int mapped = 0;
+    for (uint64 a = v->addr; a < v->addr + v->length; a += PGSIZE) {
+      pte_t *pte = walk(p->pagetable, a, 0);
+      if (pte && (*pte & PTE_V)) {
+        mapped = 1;
+        break;
+      }
+    }
+    if (mapped) {
+      uvmunmap(p->pagetable, v->addr, v->length / PGSIZE, 0); // 0: 不强制释放物理页（已由写回完成）
+    }
+    fileclose(v->f);
+    v->used = 0;
+  }  
+    
   // Close all open files.
   for(int fd = 0; fd < NOFILE; fd++){
     if(p->ofile[fd]){

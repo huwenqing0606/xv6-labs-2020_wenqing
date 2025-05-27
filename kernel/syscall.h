@@ -20,3 +20,5 @@
 #define SYS_link   19
 #define SYS_mkdir  20
 #define SYS_close  21
+#define SYS_mmap   22   // 添加 sys_mmap 系统调用号
+#define SYS_munmap 23   // 添加 sys_munmap 系统调用号

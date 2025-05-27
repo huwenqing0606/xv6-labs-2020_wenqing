@@ -5,6 +5,10 @@
 #include "spinlock.h"
 #include "proc.h"
 #include "defs.h"
+#include "fcntl.h"
+#include "fs.h"
+#include "sleeplock.h"
+#include "file.h"
 
 struct spinlock tickslock;
 uint ticks;
@@ -67,7 +71,65 @@ usertrap(void)
     syscall();
   } else if((which_dev = devintr()) != 0){
     // ok
-  } else {
+  } 
+  // 在usertrap函数里，检查r_scause()函数返回值是否为15或者13，然后通过r_stval函数获取出现问题的虚拟地址
+  // Fill in the page table lazily, in response to page faults. 
+  //  That is, mmap should not allocate physical memory or read the file. 
+  //  Instead, do that in page fault handling code in (or called by) usertrap, 
+  //  as in the lazy page allocation lab. The reason to be lazy is to ensure 
+  //  that mmap of a large file is fast, and that mmap of a file larger 
+  //  than physical memory is possible.
+  else if (r_scause() == 15 || r_scause() == 13) // check whether a fault is a page fault 
+                                                 // by seeing if r_scause() is 13 or 15
+  {
+    uint64 va = r_stval(); // r_stval() returns the RISC-V stval register, 
+                           // which contains the virtual address that caused the page fault
+    va = PGROUNDDOWN(va);
+    struct proc *p = myproc();
+    // 检查该地址是否落在某个 VMA 区间
+    int found = 0;
+    for(int i=0; i<MAX_VMA; i++){
+      struct vma *v = &p->vmas[i];
+      if (!v->used) continue;
+      if (va >= v->addr && va < v->addr + v->length){
+        found = 1;
+        // lazy allocation of physical pages
+        uint64 ka = (uint64) kalloc();
+        if (ka == 0)
+          p->killed = 1; // if kalloc() fails in the page fault handler, kill the current process
+        else {
+          memset((void*)ka, 0, PGSIZE); // mapping a newly-allocated page of physical memory at the faulting address
+          va = PGROUNDDOWN(va); // round the faulting virtual address down to a page boundary
+          // Read 4096 bytes of the relevant file into that page, 
+          //  and map it into the user address space. Read the file with readi, 
+          //  which takes an offset argument at which to read in the file 
+          //  (but you will have to lock/unlock the inode passed to readi). 
+          begin_op();
+          ilock(v->f->ip); // 锁 inode
+          readi(v->f->ip, 0, ka, va - v->addr + v->file_offset, PGSIZE);
+          iunlock(v->f->ip);
+          end_op();
+          // Don't forget to set the permissions correctly on the page.
+          // 初始化页表权限，PTE_U 表示用户页（用户进程可访问）
+          int perm = PTE_U;
+          // 如果 mmap 时指定了可读 (PROT_READ)，则添加页表的可读位 PTE_R
+          if(v->prot & PROT_READ)
+            perm |= PTE_R;
+          // 如果 mmap 时指定了可写 (PROT_WRITE)，则添加页表的可写位 PTE_W
+          if(v->prot & PROT_WRITE)
+            perm |= PTE_W;
+          if (mappages(p->pagetable, va, PGSIZE, ka, perm) != 0)
+            {
+                kfree((void*)ka);
+                p->killed = 1;
+            }
+          break; // once found and mmap done, terminate the for loop
+        }
+      }
+    } // end for
+    if (!found) p->killed = 1;  // kill the process if not found in any VMA
+  } // 结束 page fault 的内存分配处理
+  else {
     printf("usertrap(): unexpected scause %p pid=%d\n", r_scause(), p->pid);
     printf("            sepc=%p stval=%p\n", r_sepc(), r_stval());
     p->killed = 1;

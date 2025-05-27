@@ -36,3 +36,5 @@ entry("getpid");
 entry("sbrk");
 entry("sleep");
 entry("uptime");
+entry("mmap"); # 添加 mmap 系统调用
+entry("munmap"); # 添加 munmap 系统调用
